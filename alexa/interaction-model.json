@@ -1,0 +1,135 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "findy bot",
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "FindItemIntent",
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery",
+                            "samples": [
+                                "where is {item}",
+                                "search for {item}",
+                                "find {item}",
+                                "{item}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "Search for {item}",
+                        "Find {item}",
+                        "Where is {item}",
+                        "Where are my {item}"
+                    ]
+                },
+                {
+                    "name": "InsertItem",
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery",
+                            "samples": [
+                                "Insert {item}",
+                                "Add {item}",
+                                "{item}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "Add {item}",
+                        "Insert {item}"
+                    ]
+                }
+            ],
+            "types": []
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "FindItemIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.125897241464.1197723246170"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "InsertItem",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "item",
+                            "type": "AMAZON.SearchQuery",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1045800033126.895330629188"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1045800033126.895330629188",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What item would you like to insert?"
+                    }
+                ]
+            },
+            {
+                "id": "Slot.Validation.1045800033126.757987465805.396796818097",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "You must insert at least one {item} ."
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.125897241464.1197723246170",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What item would you like to search for?"
+                    }
+                ]
+            }
+        ]
+    }
+}

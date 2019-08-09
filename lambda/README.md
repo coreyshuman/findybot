@@ -1,5 +1,5 @@
 # Lambda Setup
-
+1. Choose "US East (N. Virignia)" (required for Alexa)
 1. Services > Lambda
 1. Create Lambda Function
 1. Author From Scratch
