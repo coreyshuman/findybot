@@ -39,7 +39,7 @@ exports.handler = async function (event, context) {
             onLaunch(event.request,
                 event.session,
                 function callback(sessionAttributes, speechletResponse) {
-                    context.succeed(buildResponse(sessionAttributes, speechletResponse));
+                    context.succeed(buildResponse({sessionAttributes, speechletResponse}));
                 });
         } else if (event.request.type === "IntentRequest") {
             const responseObject = await onIntent(context,
@@ -100,6 +100,8 @@ async function onIntent(context, intentRequest, session) {
     // dispatch custom intents to handlers here
     if (intentName == 'InsertItemIntent') {
         return await handleInsertItem(context, intent, session);
+    } else if (intentName == 'FindItemIntent') {
+        return await handleFindItem(context, intent, session);
     }
     else {
         throw "Invalid intent";
@@ -118,17 +120,29 @@ function onSessionEnded(sessionEndedRequest, session) {
     // Add any cleanup logic here
 }
 
-async function handleInsertItem(context, intent, session, callback) {
+async function handleInsertItem(context, intent, session) {
     console.log(intent);
     let speechletResponse = buildSpeechletResponseWithoutCard("Item could not be inserted", "Try Again", true);
     // todo parse this nicely
-    const res = await context.parser.parseInsertCommand(intent.slots.Item.value);
+    const res = await context.parser.parseInsertCommand(intent.slots.item.value);
     console.log(res);
     if(res.success) {
-        speechletResponse = buildSpeechletResponseWithoutCard(`Item {res.name} Inserted, Row {res.row}, Column {re.col}`, "", "true");
+        speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Inserted, Row ${res.row}, Column ${res.col}`, "", "true");
+    } else {
+        speechletResponse = buildSpeechletResponseWithoutCard("Item could not be inserted. " + res.message, "Try Again", true);
     }
 
     return {sessionAttributes: session.attributes, speechletResponse};
+}
+
+async function handleFindItem(context, intent, session) {
+    const res = await context.parser.parseFindItem(intent.slots.item.value);
+    console.log(res);
+    if(res.success) {
+        speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Found, Row ${res.row}, Column ${res.col}`, "", "true");
+    } else {
+        speechletResponse = buildSpeechletResponseWithoutCard(res.message, "", true);
+    }
 }
 
 // ------- Helper functions to build responses -------

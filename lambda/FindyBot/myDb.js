@@ -15,7 +15,7 @@ module.exports = class Database {
     const query = "select name, quantity, row, col from findybot.items where namekey like $1::varchar;";
     const res = await this.client.query(query, [ itemName ]);
   
-    if(res.rows && res.rows.count > 0) {
+    if(res.rows && res.rows.length > 0) {
       return res.rows;
     } else {
       return null;
@@ -23,22 +23,22 @@ module.exports = class Database {
   }
 
   async findConsumedBoxes() {
-    const query = "select distinct row,col from findybot.items";
+    const query = "select distinct row,col from findybot.items;";
     const res = await this.client.query(query);
   
-    if(res.rows && res.rows.count > 0) {
+    if(res.rows && res.rows.length > 0) {
       return res.rows;
     } else {
       return null;
     }
   }
 
-  async insertItem(itemName, itemCount, useSmallBox, row, col) {
-    const query = 'insert into findybot.items ("namekey", "name", "quantity", "row", "col", "isSmallBox")' 
-      + 'values($1::varchar, $2::varchar, $3::number, $4::number, $5::number, $6) returning id;';
-    const res = await this.client.query(query, [itemName, itemCount, useSmallBox, row, col]);
+  async insertItem(nameKey, itemName, itemCount, useSmallBox, row, col) {
+    const query = 'insert into findybot.items ("namekey", "name", "quantity", "row", "col", "issmallbox")' 
+      + 'values($1::varchar, $2::varchar, $3::integer, $4::integer, $5::integer, $6) returning namekey;';
+    const res = await this.client.query(query, [nameKey, itemName, itemCount, row, col, useSmallBox]);
     //await this.client.end();
-    return res.rows[0].id;
+    return res.rows[0].namekey;
   }
 
   async logQuery(requestBody) {

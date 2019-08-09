@@ -23,21 +23,26 @@ module.exports = class CommandParser {
         cmd = cmd.toLowerCase();
 
         const boxInfo = getBoxInfo(cmd);
+        console.log(boxInfo);
         if(boxInfo.hasBox) {
             commandModel.box = boxInfo.size;
         }
         const tagsInfo = getTagsInfo(cmd);
+        console.log(tagsInfo);
         const itemInfo = getItemInfo(cmd, boxInfo, tagsInfo);
-
+        console.log(itemInfo);
         // todo - prepare tags
         
         const existingItems = await this.client.findItem(itemInfo.itemName);
+        console.log(existingItems);
         if(existingItems) {
-            return existingItems;
+            existingItems[0].success = true;
+            return existingItems[0];
         }
 
         const matrix = new MatrixModel();
         const consumedBoxes = await this.client.findConsumedBoxes();
+        console.log(consumedBoxes);
         if(consumedBoxes) {
             for(const box in consumedBoxes) {
                 matrix.addItem(box.row, box.col);
@@ -45,17 +50,33 @@ module.exports = class CommandParser {
         }
 
         const nextAvailableBox = matrix.getNextAvailableBox(!(boxInfo.hasBox && boxInfo.size == 'L'));
+        console.log(nextAvailableBox);
         if(nextAvailableBox == null) {
-            return {success: false};
+            return {success: false, message: "No available containers."};
         }
         
-        await this.client.insertItem(itemInfo.itemName,
+        const id = await this.client.insertItem(itemInfo.itemName,
             itemInfo.itemName,
             1,
             !(boxInfo.hasBox && boxInfo.size == 'L'),
             nextAvailableBox.row,
             nextAvailableBox.col);
+
+        console.log("id= " + id);
         return {success: true, name: itemInfo.itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
+    }
+
+    async parseFindItem(cmd) {
+        cmd = cmd.toLowerCase();
+
+        const existingItems = await this.client.findItem(itemInfo.itemName);
+        console.log(existingItems);
+        if(existingItems) {
+            existingItems[0].success = true;
+            return existingItems[0];
+        }
+        
+        return {success: false, message: "Item not found."};
     }
 }
 
@@ -71,7 +92,7 @@ function getBoxInfo(cmd) {
     for(const prefix in boxPrefixes) {
         for(const boxType in boxTypes) {
             for(const name in boxNames) {
-                const searchString = `{prefix} {boxType.name} {name}`;
+                const searchString = `${prefix} ${boxType.name} ${name}`;
                 const index = cmd.indexOf(searchString);
                 if(index != -1) {
                     return {hasBox: true, size: boxType.size, boxIndex: index};
