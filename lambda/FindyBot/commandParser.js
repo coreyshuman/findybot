@@ -1,6 +1,5 @@
 'use strict';
 
-const CommandModel = require('./commandModel');
 const MatrixModel = require('./matrixModel');
 
 module.exports = class CommandParser {
@@ -19,51 +18,70 @@ module.exports = class CommandParser {
     // b. "[count] <item name> into a <small box|big box> with tags <tag0 tag1 tag2 ...>"
     // c. "[count] <item name> with tags <tag0 tag1 tag2 ...> into a <small box|big box>"
     //
-    // Todo: Singularize item
     async parseInsertCommand(cmd) {
         cmd = cmd.toLowerCase();
 
-        const countInfo = this.getCountInfo(cmd);
-        const boxInfo = this.getBoxInfo(countInfo.subcommand);
-        console.log(boxInfo);
-        
-        const tagInfo = this.getTagInfo(boxInfo.subcommand);
-        console.log(tagInfo);
-        const itemName = tagInfo.subcommand;
+        try {
+            const countInfo = this.getCountInfo(cmd);
+            const boxInfo = this.getBoxInfo(countInfo.subcommand);
+            const tagInfo = this.getTagInfo(boxInfo.subcommand);
+            // todo - singularize item
+            const itemName = tagInfo.subcommand;
+            const nameKey = this.getNameKey(itemName);
 
-        // todo - prepare tags
-        
-        const existingItems = await this.client.findItem(itemName);
-        console.log(existingItems);
-        if(existingItems) {
-            existingItems[0].success = true;
-            return existingItems[0];
-        }
-
-        const matrix = new MatrixModel();
-        const consumedBoxes = await this.client.findConsumedBoxes();
-        console.log(consumedBoxes);
-        if(consumedBoxes) {
-            for(const box in consumedBoxes) {
-                matrix.addItem(consumedBoxes[box].row, consumedBoxes[box].col);
+            // add item name to tags
+            tagInfo.tags = tagInfo.tags.concat(itemName.split(' '));
+            
+            const existingItems = await this.client.findItem(nameKey);
+            // item already exists, update tag and return
+            if(existingItems) {
+                await this.client.insertTags(nameKey, tagInfo.tags);
+                existingItems[0].success = true;
+                return existingItems[0];
             }
-        }
 
-        const nextAvailableBox = matrix.getNextAvailableBox(boxInfo.boxSize === 'S');
-        console.log(nextAvailableBox);
-        if(nextAvailableBox == null) {
-            return {success: false, message: "No available containers."};
-        }
-        
-        const nameKey = this.getNameKey(itemName);
-        const id = await this.client.insertItem(nameKey,
-            itemName,
-            countInfo.count,
-            boxInfo.boxSize === 'S',
-            nextAvailableBox.row,
-            nextAvailableBox.col);
+            const matrix = new MatrixModel();
+            const consumedBoxes = await this.client.findConsumedBoxes();
+            if(consumedBoxes) {
+                for(const box in consumedBoxes) {
+                    matrix.addItem(consumedBoxes[box].row, consumedBoxes[box].col);
+                }
+            }
 
-        return {success: true, id, nameKey, name: itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
+            const nextAvailableBox = matrix.getNextAvailableBox(boxInfo.boxSize === 'S');
+            if(nextAvailableBox == null) {
+                return {success: false, message: "No available containers."};
+            }
+            
+            try {
+                await this.client.query('BEGIN');
+                await this.client.insertItem(nameKey,
+                    itemName,
+                    countInfo.count,
+                    boxInfo.boxSize === 'S',
+                    nextAvailableBox.row,
+                    nextAvailableBox.col);
+
+                await this.client.insertTags(nameKey, tagInfo.tags);
+                await this.client.query('COMMIT');
+            } catch(e) {
+                try {
+                    await this.client.query('ROLLBACK');
+                } catch(e) {}
+                throw e;
+            }
+
+            return {success: true, nameKey, name: itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
+
+        } catch(e) {
+            console.error(e); 
+            try {
+                await this.client.logError(e);
+            } catch(e) { 
+                console.error(e); 
+            }
+            return {success: false, message: "Database error occurred."};
+        }
     }
 
     async parseFindItem(cmd) {
@@ -89,7 +107,9 @@ module.exports = class CommandParser {
         const edgeCases = [
             {word: 'for', count: 4},
             {word: 'a', count: 1},
-            {word: 'an', count: 1}
+            {word: 'an', count: 1},
+            {word: 'to', count: 2},
+            {word: 'too', count: 2}
 
         ];
         const firstToken = cmd.split(' ')[0];
@@ -168,19 +188,6 @@ module.exports = class CommandParser {
         }
     
         return response;
-    }
-    
-    getItemInfo(cmd, boxInfo, tagsInfo) {
-        let itemName = cmd;
-        if(boxInfo.hasBox && tagsInfo.hasTags) {
-            itemName = cmd.substring(0, tagsInfo.tagsIndex < boxInfo.boxIndex ? tagsInfo.tagIndex : boxInfo.boxIndex);
-        } else if (boxInfo.hasBox) {
-            itemName = cmd.substring(0, boxInfo.boxIndex);
-        } else if (tagsInfo.hasTags) {
-            itemName = cmd.substring(0, tagsInfo.tagsIndex);
-        }
-        
-        return {itemName};
     }
 
     getNameKey(name) {

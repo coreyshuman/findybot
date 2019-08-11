@@ -4,6 +4,8 @@ const assert = require('assert');
 const CommandParser = require('../commandParser');
 
 const client = {};
+client.logError = (e) => {console.error(e.message ? e.message : e)};
+client.query = () => {return Promise.resolve()};
 const commandParser = new CommandParser(client);
 
 describe('Command Parser Tests', () => {
@@ -206,12 +208,22 @@ describe('Command Insert Test', () => {
             };
             assert.deepStrictEqual(insert, insertExpected, 'insertItem parameters incorrect.');
             return Promise.resolve(nameKey)
-        
+        };
+        client.insertTags = (_nameKey, _tags) => {
+            const insertExpected = {
+                nameKey,
+                tags: ['green', 'solder', 'prototype', 'board']
+            };
+            const insert = {
+                nameKey: _nameKey,
+                tags: _tags
+            };
+            assert.deepStrictEqual(insert, insertExpected, 'insertItem parameters incorrect.');
+            return Promise.resolve(2);
         };
 
         const expected = {
             success: true, 
-            id: nameKey,
             nameKey,
             name, 
             row: 0, 
@@ -250,13 +262,23 @@ describe('Command Insert Test', () => {
                 col: _col
             };
             assert.deepStrictEqual(insert, insertExpected, 'insertItem parameters incorrect.');
-            return Promise.resolve(nameKey)
-        
+            return Promise.resolve(nameKey);
+        };
+        client.insertTags = (_nameKey, _tags) => {
+            const insertExpected = {
+                nameKey,
+                tags: ['green', 'solder', 'prototype', 'circuit', 'board']
+            };
+            const insert = {
+                nameKey: _nameKey,
+                tags: _tags
+            };
+            assert.deepStrictEqual(insert, insertExpected, 'insertItem parameters incorrect.');
+            return Promise.resolve(2);
         };
 
         const expected = {
             success: true, 
-            id: nameKey,
             nameKey,
             name, 
             row: 8, 

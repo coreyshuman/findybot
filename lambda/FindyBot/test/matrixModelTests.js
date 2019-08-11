@@ -45,7 +45,6 @@ describe('Matrix Model Tests', () => {
         }
 
         const expected = {row: 9, col: 3};
-        console.log(matrixModel)
         const res = matrixModel.getNextAvailableBox(false);
 
         assert.deepStrictEqual(res, expected, 'getNextAvailable failed.');
