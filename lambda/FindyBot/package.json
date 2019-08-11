@@ -4,7 +4,7 @@
   "description": "Findybot on AWS!",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha",
     "predeploy": "zip -r Lambda-Deployment.zip * -x *.zip *.log"
   },
   "repository": {
@@ -19,5 +19,8 @@
   "homepage": "https://github.com/coreyshuman/findybot#readme",
   "dependencies": {
     "pg": "^7.12.0"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.0"
   }
 }

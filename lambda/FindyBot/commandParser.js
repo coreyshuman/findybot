@@ -1,3 +1,5 @@
+'use strict';
+
 const CommandModel = require('./commandModel');
 const MatrixModel = require('./matrixModel');
 
@@ -19,21 +21,19 @@ module.exports = class CommandParser {
     //
     // Todo: Singularize item
     async parseInsertCommand(cmd) {
-        const commandModel = new CommandModel();
         cmd = cmd.toLowerCase();
 
-        const boxInfo = getBoxInfo(cmd);
+        const countInfo = this.getCountInfo(cmd);
+        const boxInfo = this.getBoxInfo(countInfo.subcommand);
         console.log(boxInfo);
-        if(boxInfo.hasBox) {
-            commandModel.box = boxInfo.size;
-        }
-        const tagsInfo = getTagsInfo(cmd);
-        console.log(tagsInfo);
-        const itemInfo = getItemInfo(cmd, boxInfo, tagsInfo);
-        console.log(itemInfo);
+        
+        const tagInfo = this.getTagInfo(boxInfo.subcommand);
+        console.log(tagInfo);
+        const itemName = tagInfo.subcommand;
+
         // todo - prepare tags
         
-        const existingItems = await this.client.findItem(itemInfo.itemName);
+        const existingItems = await this.client.findItem(itemName);
         console.log(existingItems);
         if(existingItems) {
             existingItems[0].success = true;
@@ -45,25 +45,25 @@ module.exports = class CommandParser {
         console.log(consumedBoxes);
         if(consumedBoxes) {
             for(const box in consumedBoxes) {
-                matrix.addItem(box.row, box.col);
+                matrix.addItem(consumedBoxes[box].row, consumedBoxes[box].col);
             }
         }
 
-        const nextAvailableBox = matrix.getNextAvailableBox(!(boxInfo.hasBox && boxInfo.size == 'L'));
+        const nextAvailableBox = matrix.getNextAvailableBox(boxInfo.boxSize === 'S');
         console.log(nextAvailableBox);
         if(nextAvailableBox == null) {
             return {success: false, message: "No available containers."};
         }
         
-        const id = await this.client.insertItem(itemInfo.itemName,
-            itemInfo.itemName,
-            1,
-            !(boxInfo.hasBox && boxInfo.size == 'L'),
+        const nameKey = this.getNameKey(itemName);
+        const id = await this.client.insertItem(nameKey,
+            itemName,
+            countInfo.count,
+            boxInfo.boxSize === 'S',
             nextAvailableBox.row,
             nextAvailableBox.col);
 
-        console.log("id= " + id);
-        return {success: true, name: itemInfo.itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
+        return {success: true, id, nameKey, name: itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
     }
 
     async parseFindItem(cmd) {
@@ -78,45 +78,112 @@ module.exports = class CommandParser {
         
         return {success: false, message: "Item not found."};
     }
-}
 
-function getBoxInfo(cmd) {
-    const boxPrefixes = ['into a', 'in a'];
-    const boxTypes = [
-        {name: 'big', size: 'L'},
-        {name: 'large', size: 'L'},
-        {name: 'small', size: 'S'},
-        {name: 'little', size: 'S'},
-    ];
-    const boxNames = ['box', 'container'];
-    for(const prefix in boxPrefixes) {
-        for(const boxType in boxTypes) {
-            for(const name in boxNames) {
-                const searchString = `${prefix} ${boxType.name} ${name}`;
-                const index = cmd.indexOf(searchString);
-                if(index != -1) {
-                    return {hasBox: true, size: boxType.size, boxIndex: index};
+    getCountInfo(cmd) {
+        const response = {
+            count: 1, 
+            command: cmd, 
+            parsedCommand: null,
+            subcommand: cmd
+        };
+        const edgeCases = [
+            {word: 'for', count: 4},
+            {word: 'a', count: 1},
+            {word: 'an', count: 1}
+
+        ];
+        const firstToken = cmd.split(' ')[0];
+        const count = parseInt(firstToken);
+        if(isNaN(count) || !isFinite(count)) {
+            for(const edge in edgeCases) {
+                if(firstToken === edgeCases[edge].word) {
+                    response.count = edgeCases[edge].count;
+                    response.parsedCommand = firstToken;
+                    response.subcommand = cmd.substring(firstToken.length).trim();
+                    return response;
+                }
+            }
+        } else {
+            response.count = count;
+            response.parsedCommand = firstToken;
+            response.subcommand = cmd.substring(firstToken.length).trim();
+        }
+        return response;
+    }
+
+    getBoxInfo(cmd) {
+        const response = {
+            boxSize: 'S', 
+            command: cmd, 
+            parsedCommand: null,
+            subcommand: cmd
+        };
+        const boxPrefixes = ['into a', 'in a'];
+        const boxTypes = [
+            {name: 'big', size: 'L'},
+            {name: 'large', size: 'L'},
+            {name: 'small', size: 'S'},
+            {name: 'little', size: 'S'},
+        ];
+        const boxNames = ['box', 'container'];
+        for(const prefix in boxPrefixes) {
+            for(const boxType in boxTypes) {
+                for(const name in boxNames) {
+                    const searchString = `${boxPrefixes[prefix]} ${boxTypes[boxType].name} ${boxNames[name]}`;
+                    const index = cmd.indexOf(searchString);
+                    if(index != -1) {
+                        response.boxSize = boxTypes[boxType].size;
+                        response.parsedCommand = searchString;
+                        response.subcommand = cmd.substring(0, index).trim();
+                        if(cmd.length > index + searchString.length) {
+                            response.subcommand += cmd.substring(index + searchString.length);
+                        }
+                        return response;
+                    }
                 }
             }
         }
-    }
-
-    return {hasBox: false, size: null, boxIndex: null};
-}
-
-function getTagsInfo(cmd) {
-    return {hasTags: false, tagsIndex: null, tags: []};
-}
-
-function getItemInfo(cmd, boxInfo, tagsInfo) {
-    let itemName = cmd;
-    if(boxInfo.hasBox && tagsInfo.hasTags) {
-        itemName = cmd.substring(0, tagsInfo.tagsIndex < boxInfo.boxIndex ? tagsInfo.tagIndex : boxInfo.boxIndex);
-    } else if (boxInfo.hasBox) {
-        itemName = cmd.substring(0, boxInfo.boxIndex);
-    } else if (tagsInfo.hasTags) {
-        itemName = cmd.substring(0, tagsInfo.tagsIndex);
+    
+        return response;
     }
     
-    return {itemName};
+    getTagInfo(cmd) {
+        const response = {
+            tags: [], 
+            command: cmd, 
+            parsedCommand: null,
+            subcommand: cmd
+        };
+        const tagPrefix = ['with tags', 'with tag'];
+        for(const prefix in tagPrefix) {
+            const searchString = tagPrefix[prefix];
+            const index = cmd.indexOf(searchString);
+            if(index != -1) {
+                const tags = cmd.substring(index + searchString.length).trim().split(' ');
+                response.tags = tags;
+                response.parsedCommand = cmd.substring(index);
+                response.subcommand = cmd.substring(0, index).trim();
+                return response;
+            }
+        }
+    
+        return response;
+    }
+    
+    getItemInfo(cmd, boxInfo, tagsInfo) {
+        let itemName = cmd;
+        if(boxInfo.hasBox && tagsInfo.hasTags) {
+            itemName = cmd.substring(0, tagsInfo.tagsIndex < boxInfo.boxIndex ? tagsInfo.tagIndex : boxInfo.boxIndex);
+        } else if (boxInfo.hasBox) {
+            itemName = cmd.substring(0, boxInfo.boxIndex);
+        } else if (tagsInfo.hasTags) {
+            itemName = cmd.substring(0, tagsInfo.tagsIndex);
+        }
+        
+        return {itemName};
+    }
+
+    getNameKey(name) {
+        return name.split(' ').join('_');
+    }
 }
