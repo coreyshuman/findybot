@@ -5,6 +5,9 @@
 *.bin
 target/
 
+# vscode environment
+.vscode/
+
 # Logs
 logs
 *.log
