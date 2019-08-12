@@ -8,6 +8,7 @@
 
 const Database = require('./myDb');
 const CommandParser = require('./commandParser');
+const ParticleApi = require('./particleApi');
 //import * as Database from './myDb';
 
 console.log("Starting Findy Bot...");
@@ -19,6 +20,7 @@ exports.handler = async function (event, context) {
     try {
         console.log("event.session.application.applicationId=" + event.session.application.applicationId);
         context.myDb = new Database();
+        context.particleApi = new ParticleApi();
         const client = await context.myDb.connect();
         context.parser = new CommandParser(context.myDb);
         event.session.logId = await context.myDb.logQuery(event);
@@ -125,6 +127,7 @@ async function handleInsertItem(context, intent, session) {
     let speechletResponse = buildSpeechletResponseWithoutCard("Item could not be inserted", "Try Again", true);
     // todo parse this nicely
     const res = await context.parser.parseInsertCommand(intent.slots.item.value);
+    await context.particleApi.highlightItem(res);
     console.log(res);
     if(res.success) {
         speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Inserted, Row ${res.row}, Column ${res.col}`, "", "true");
@@ -137,6 +140,7 @@ async function handleInsertItem(context, intent, session) {
 
 async function handleFindItem(context, intent, session) {
     const res = await context.parser.parseFindItem(intent.slots.item.value);
+    await context.particleApi.highlightItem(res);
     console.log(res);
     if(res.success) {
         speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Found, Row ${res.row}, Column ${res.col}`, "", "true");

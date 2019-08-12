@@ -71,7 +71,7 @@ module.exports = class CommandParser {
                 throw e;
             }
 
-            return {success: true, nameKey, name: itemName, row: nextAvailableBox.row, col: nextAvailableBox.col};
+            return {success: true, nameKey, name: itemName, quantity: countInfo.count, row: nextAvailableBox.row, col: nextAvailableBox.col};
 
         } catch(e) {
             console.error(e); 

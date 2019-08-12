@@ -226,6 +226,7 @@ describe('Command Insert Test', () => {
             success: true, 
             nameKey,
             name, 
+            quantity: 4,
             row: 0, 
             col: 1
         };
@@ -281,6 +282,7 @@ describe('Command Insert Test', () => {
             success: true, 
             nameKey,
             name, 
+            quantity: 44,
             row: 8, 
             col: 2
         };

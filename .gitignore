@@ -1,5 +1,6 @@
 # deployment
 *.zip
+*.bin
 
 # Logs
 logs

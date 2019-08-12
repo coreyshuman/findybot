@@ -35,6 +35,7 @@ void setDisplay(const char *data);
 void setBrightness(const char *data);
 void setScrollText(const char *data);
 void setStateFromText(bool& variable, const char *onOffText);
+void welcomeResponseHandler(JsonObject& json);
 void findItemResponseHandler(JsonObject& json);
 void findTagsResponseHandler(JsonObject& json);
 float normalize(float value, float start, float end);
@@ -91,7 +92,7 @@ void setup()
   Serial.println("FindyBot3000");
 
   // Handle incoming IFTTT command
-  Particle.subscribe("Findybot_", IFTTTEventHandler);
+  Particle.subscribe("Findybot_", azureFunctionEventResponseHandler, MY_DEVICES);
 
   // Handle Azure Function web hook response
   Particle.subscribe("hook-response/callAzureFunctionEvent", azureFunctionEventResponseHandler, MY_DEVICES);
@@ -349,6 +350,7 @@ const ResponseHandler responseHandlers[] =
   { ShowAllBoxes, showAllBoxesResponseHandler },
   { BundleWith, bundleWithResponseHandler },
   { HowMany, howManyResponseHandler },
+  { Welcome, welcomeResponseHandler },
   { UnknownCommand, unknownCommandResponseHandler }
 };
 
@@ -394,6 +396,19 @@ void azureFunctionEventResponseHandler(const char *event, const char *data)
       break;
     }
   }
+}
+
+void welcomeResponseHandler(JsonObject& json)
+{
+  char* data = json["Message"];
+
+  char* tmp = "W E L C O M E  ";
+  strcat(tmp, (char*)data);
+  String s(tmp);
+  s = s.toUpperCase();
+
+  GFX_setString(s);
+  setDisplay(ON);
 }
 
 void findItemResponseHandler(JsonObject& json)

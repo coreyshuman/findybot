@@ -49,7 +49,7 @@ void setup()
   Serial.println("FindyBot3000");
 
   // Handle incoming IFTTT command
-  Particle.subscribe("Findybot_", IFTTTEventHandler);
+  Particle.subscribe("Findybot_", azureFunctionEventResponseHandler, MY_DEVICES);
 
   // Handle Azure Function web hook response
   Particle.subscribe("hook-response/callAzureFunctionEvent", azureFunctionEventResponseHandler, MY_DEVICES);
@@ -307,6 +307,7 @@ const ResponseHandler responseHandlers[] =
   { ShowAllBoxes, showAllBoxesResponseHandler },
   { BundleWith, bundleWithResponseHandler },
   { HowMany, howManyResponseHandler },
+  { Welcome, welcomeResponseHandler },
   { UnknownCommand, unknownCommandResponseHandler }
 };
 
@@ -317,24 +318,9 @@ void azureFunctionEventResponseHandler(const char *event, const char *data)
   Serial.printlnf("azureFunctionEventResponseHandler\nevent: %s\ndata: %s", event, data);
   if (data == NULL) return;
 
-  // remove all backslashes ('\') added by particle webhook-response
-  int dataLen = strlen(data);
-  int j = 0;
-  for (int i = 1; i < dataLen-1; i++)
-  {
-    if (data[i] == '\\') continue;
-    msg[j++] = data[i];
-  }
-  msg[j] = '\0'; // Terminate the string
-
-  //strcpy(msg, data);
-  Serial.println("------------------------------------");
-  Serial.println(msg);
-  Serial.println(strlen(msg));
-  Serial.println("------------------------------------");
 
   jsonBuffer.clear(); // Aha! This is what I needed to fix multiple FindItem calls.
-  JsonObject& responseJson = jsonBuffer.parseObject(msg);
+  JsonObject& responseJson = jsonBuffer.parseObject(data);
 
   if (!responseJson.success()) {
     Serial.println("Parsing JSON failed");
@@ -352,6 +338,19 @@ void azureFunctionEventResponseHandler(const char *event, const char *data)
       break;
     }
   }
+}
+
+void welcomeResponseHandler(JsonObject& json)
+{
+  const char* data = json["Message"];
+
+  char* tmp = "W E L C O M E  ";
+  strcat(tmp, (char*)data);
+  String s(tmp);
+  s = s.toUpperCase();
+
+  GFX_setString(s);
+  setDisplay(ON);
 }
 
 void findItemResponseHandler(JsonObject& json)
