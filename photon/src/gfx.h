@@ -10,6 +10,7 @@ void GFX_setup();
 void GFX_loop();
 
 void GFX_setString(String s);
+void GFX_showError(String s);
 void GFX_setBrightness(int brightness);
 void GFX_lightBox(int row, int col, uint16_t color);
 void GFX_clear();

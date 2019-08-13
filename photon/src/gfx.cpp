@@ -4,24 +4,15 @@
 #include "defines.h"
 #include "gfx.h"
 
-const PROGMEM unsigned char fire[] = {
-  0B00010000,
-  0B01100100,
-  0B11100010,
-  0B01110000,
-  0B00111000,
-  0B00000000
-};
-
-const PROGMEM unsigned char smile[] = {
-  0B00000000, 0B00000000,
+const PROGMEM unsigned char error[] = {
+  0B00000011, 0B11000000,
   0B00011100, 0B00111000,
-  0B00100010, 0B01000100,
-  0B00000000, 0B00000000,
-  0B11000000, 0B00000011,
-  0B01100000, 0B00000110,
-  0B00011111, 0B11111000,
-  0B00000000, 0B00000000
+  0B01100110, 0B00000110,
+  0B11000001, 0B10000011,
+  0B11000000, 0B11000011,
+  0B01100000, 0B01100110,
+  0B00011100, 0B00111000,
+  0B00000011, 0B11000000
 };
 
 const int boxLedOffsetByColumnTop[] = {
@@ -102,6 +93,7 @@ ColorName colorNames[] = {
 };
 
 bool enableTextScrolling = false;
+bool errorMessage = false;
 
 // Controlled locally
 bool enableLightAllBoxes = false;
@@ -115,8 +107,9 @@ uint8_t colorCount = sizeof(colors) / sizeof(uint16_t);
 int scrollPosition = matrix.width();
 int scrollCount = 0;
 
-String text = "H I ";
+String text = "";
 int textLength = 0;
+system_tick_t tick;
 
 int sRow, sCol;
 uint16_t sColor;
@@ -144,13 +137,25 @@ void GFX_loop() {
 }
 
 void GFX_setString(String s) {
+  text = "";
   for(int i = 0; i < s.length(); i++) {
-    text += ' ';
+    //text += ' ';
+    if(s[i] >= 'a' || s[i] <= 'z') {
+      s[i] = s[i] - 0x20;
+    }
     text += s[i];
   }
 
   textLength = text.length();
   enableTextScrolling = true;
+  scrollCount = 0;
+  errorMessage = false;
+}
+
+void GFX_showError(String s) {
+  GFX_setString(s);
+  errorMessage = true;
+  sSet = false;
 }
 
 void GFX_setBrightness(int brightness) {
@@ -176,10 +181,10 @@ void GFX_lightBox(int row, int col, uint16_t color)
   int ledCount;
   int ledOffset;
 
-    sRow = row;
-    sCol = col;
-    sColor = green;
-    sSet = true;
+  sRow = row;
+  sCol = col;
+  sColor = green;
+  sSet = true;
 
   if (row < 8 && col < 16) {
     ledCount = boxLedWidthByColumnTop[col];
@@ -203,31 +208,38 @@ void GFX_lightBox(int row, int col, uint16_t color)
 }
 
 void GFX_showNotFound() {
-    matrix.fillScreen(0);
-    matrix.drawPixel(29, 7, red);
-    matrix.drawPixel(30, 7, red);
-    matrix.show();
+  sSet = false;
+  matrix.fillScreen(0);
+  matrix.setCursor(LED_COLS / 4, LED_ROWS / 4);
+  matrix.print("X X X");
+  matrix.show();
 }
 
 void scrollDisplay()
 {
-  static const int smileOffset = 16+8;
-
   matrix.fillScreen(0);
-  matrix.setCursor(scrollPosition, 0);
-  matrix.print(text);
 
-  for (int i = 0; i < textLength/2 + (smileOffset/LED_MATRIX_CHAR_WIDTH)-2; i++) {
-    matrix.drawBitmap(scrollPosition + i*LED_MATRIX_CHAR_WIDTH*2, 8, fire, 8, 6, colors[0 /*(scrollCount+i)%colorCount*/]);
+  // temporary text limit
+  if(scrollCount == 3) {
+    scrollPosition = matrix.width();
+    scrollCount = 0;
+    enableTextScrolling = 0;
+    matrix.show();
+    return;
   }
 
-  matrix.drawBitmap(scrollPosition + textLength*LED_MATRIX_CHAR_WIDTH + 8, 0, smile, 16, 8, colors[2]);
+  matrix.setCursor(scrollPosition, errorMessage ? 8 : 0);
+  matrix.print(text);
 
   // Change the text color on the next scroll through
-  if (--scrollPosition < -textLength*LED_MATRIX_CHAR_WIDTH - smileOffset) {
+  if (--scrollPosition < -textLength*LED_MATRIX_CHAR_WIDTH - 8) {
     scrollPosition = matrix.width();
     if(++scrollCount >= colorCount) scrollCount = 0;
     matrix.setTextColor(colors[scrollCount]);
+  }
+
+  if(errorMessage) {
+    matrix.drawBitmap(0 - scrollPosition, 0, error, 16, 8, red);
   }
 
   if (sSet) {
@@ -235,7 +247,6 @@ void scrollDisplay()
   }
 
   matrix.show();
-  //delay(10);
 }
 
 // Light each led-mapped box on the organizer one by one

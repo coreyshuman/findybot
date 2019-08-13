@@ -130,7 +130,7 @@ async function handleInsertItem(context, intent, session) {
     await context.particleApi.highlightItem(res);
     console.log(res);
     if(res.success) {
-        speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Inserted, Row ${res.row}, Column ${res.col}`, "", "true");
+        speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.items[0].name} Inserted, Row ${res.items[0].row}, Column ${res.items[0].col}`, "", "true");
     } else {
         speechletResponse = buildSpeechletResponseWithoutCard("Item could not be inserted. " + res.message, "Try Again", true);
     }
@@ -139,14 +139,21 @@ async function handleInsertItem(context, intent, session) {
 }
 
 async function handleFindItem(context, intent, session) {
+    let speechletResponse = buildSpeechletResponseWithoutCard("Item could not be found.", "", true);
     const res = await context.parser.parseFindItem(intent.slots.item.value);
     await context.particleApi.highlightItem(res);
     console.log(res);
     if(res.success) {
-        speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.name} Found, Row ${res.row}, Column ${res.col}`, "", "true");
+        if(res.count > 0) {
+            speechletResponse = buildSpeechletResponseWithoutCard(`Item ${res.items[0].name} Found, Row ${res.items[0].row}, Column ${res.items[0].col}`, "", "true");
+        } else {
+            speechletResponse = buildSpeechletResponseWithoutCard("Could not find item.", "", true);
+        }
     } else {
-        speechletResponse = buildSpeechletResponseWithoutCard(res.message, "", true);
+        speechletResponse = buildSpeechletResponseWithoutCard("Could not find item. " + res.message, "", true);
     }
+
+    return {sessionAttributes: session.attributes, speechletResponse};
 }
 
 // ------- Helper functions to build responses -------

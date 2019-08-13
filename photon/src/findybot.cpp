@@ -18,17 +18,6 @@
 
 void setup();
 void loop();
-void IFTTTEventHandler(const char* event, const char* data);
-void findItem(const char *data);
-void findTags(const char *data);
-void insertItem(const char *data);
-void removeItem(const char *data);
-void addTags(const char *data);
-void setQuantity(const char *data);
-void updateQuantity(const char *data);
-void showAllBoxes(const char *data);
-void bundleWith(const char *data);
-void howMany(const char *data);
 void changeColors(const char *data);
 void welcome(const char* data);
 void setDisplay(const char *data);
@@ -36,7 +25,8 @@ void setBrightness(const char *data);
 void setScrollText(const char *data);
 void setStateFromText(bool& variable, const char *onOffText);
 void welcomeResponseHandler(JsonObject& json);
-void findItemResponseHandler(JsonObject& json);
+void showItemsResponseHandler(JsonObject& json);
+void errorResponseHandler(JsonObject& json);
 void findTagsResponseHandler(JsonObject& json);
 float normalize(float value, float start, float end);
 void insertItemResponseHandler(JsonObject& json);
@@ -94,8 +84,6 @@ void setup()
   // Handle incoming IFTTT command
   Particle.subscribe("Findybot_", azureFunctionEventResponseHandler, MY_DEVICES);
 
-  // Handle Azure Function web hook response
-  Particle.subscribe("hook-response/callAzureFunctionEvent", azureFunctionEventResponseHandler, MY_DEVICES);
 
   // Start FindyBot3000 with the display off
   pinMode(POWER_SUPPLY_RELAY_PIN, OUTPUT);
@@ -126,7 +114,7 @@ struct CommandHandler
 };
 
 // Requires AzureFunction
-const char* FindItem = "FindItem";
+const char* ShowItems = "ShowItems";
 const char* FindTags = "FindTags";
 const char* InsertItem = "InsertItem";
 const char* RemoveItem = "RemoveItem";
@@ -135,6 +123,7 @@ const char* SetQuantity = "SetQuantity";
 const char* UpdateQuantity = "UpdateQuantity";
 const char* ShowAllBoxes = "ShowAllBoxes";
 const char* BundleWith = "BundleWith";
+const char* ErrorResponse = "Error";
 const char* HowMany = "HowMany";
 
 // Processed on Particle Photon
@@ -144,42 +133,6 @@ const char* SetDisplay = "SetDisplay";
 const char* SetScrollText = "SetScrollText";
 const char* ChangeColors = "ChangeColors";
 const char* UnknownCommand = "UnknownCommand";
-
-
-// Function callbacks
-const CommandHandler commands[] =
-{
-  { FindItem, findItem },
-  { FindTags, findTags },
-  { InsertItem, insertItem },
-  { RemoveItem, removeItem },
-  { AddTags, addTags },
-  { SetQuantity, setQuantity},
-  { UpdateQuantity, updateQuantity},
-  { SetBrightness, setBrightness },
-  { SetDisplay, setDisplay },
-  { SetScrollText, setScrollText },
-  { ShowAllBoxes, showAllBoxes },
-  { BundleWith, bundleWith },
-  { HowMany, howMany },
-  { ChangeColors, changeColors },
-  { Welcome, welcome }
-};
-
-void IFTTTEventHandler(const char* event, const char* data)
-{
-  if (event == NULL || data == NULL) return;
-
-  Serial.printlnf("IFTTTEventHandler event: %s, data: %s", event, data);
-
-  // loop through each command until a match is found; then call the associated handler
-  for (CommandHandler cmd : commands) {
-    if (strstr(event, cmd.command)) {
-      cmd.handle(data);
-      break;
-    }
-  }
-}
 
 void callAzureFunction(const char* command, const char* payload, bool isJson = false)
 {
@@ -199,55 +152,6 @@ void callAzureFunction(const char* command, const char* payload, bool isJson = f
 
 /* ============= IFTTT ASSISTANT EVENT HANDLERS ============= */
 
-void findItem(const char *data)
-{
-  callAzureFunction(FindItem, data);
-}
-
-void findTags(const char *data)
-{
-  callAzureFunction(FindTags, data);
-}
-
-void insertItem(const char *data)
-{
-  callAzureFunction(InsertItem, data, true);
-}
-
-void removeItem(const char *data)
-{
-  callAzureFunction(RemoveItem, data);
-}
-
-void addTags(const char *data)
-{
-  callAzureFunction(AddTags, data);
-}
-
-void setQuantity(const char *data)
-{
-  callAzureFunction(SetQuantity, data, true);
-}
-
-void updateQuantity(const char *data)
-{
-  callAzureFunction(UpdateQuantity, data, true);
-}
-
-void showAllBoxes(const char *data)
-{
-  callAzureFunction(ShowAllBoxes, data);
-}
-
-void bundleWith(const char *data)
-{
-  callAzureFunction(BundleWith, data, true);
-}
-
-void howMany(const char *data)
-{
-  callAzureFunction(HowMany, data);
-}
 
 void changeColors(const char *data)
 {
@@ -340,7 +244,7 @@ struct ResponseHandler
 
 const ResponseHandler responseHandlers[] =
 {
-  { FindItem, findItemResponseHandler },
+  { ShowItems, showItemsResponseHandler },
   { FindTags, findTagsResponseHandler },
   { InsertItem, insertItemResponseHandler },
   { RemoveItem, removeItemResponseHandler },
@@ -351,6 +255,7 @@ const ResponseHandler responseHandlers[] =
   { BundleWith, bundleWithResponseHandler },
   { HowMany, howManyResponseHandler },
   { Welcome, welcomeResponseHandler },
+  { ErrorResponse, errorResponseHandler },
   { UnknownCommand, unknownCommandResponseHandler }
 };
 
@@ -361,31 +266,16 @@ void azureFunctionEventResponseHandler(const char *event, const char *data)
   Serial.printlnf("azureFunctionEventResponseHandler\nevent: %s\ndata: %s", event, data);
   if (data == NULL) return;
 
-  // remove all backslashes ('\') added by particle webhook-response
-  int dataLen = strlen(data);
-  int j = 0;
-  for (int i = 1; i < dataLen-1; i++)
-  {
-    if (data[i] == '\\') continue;
-    msg[j++] = data[i];
-  }
-  msg[j] = '\0'; // Terminate the string
 
-  //strcpy(msg, data);
-  Serial.println("------------------------------------");
-  Serial.println(msg);
-  Serial.println(strlen(msg));
-  Serial.println("------------------------------------");
-
-  jsonBuffer.clear(); // Aha! This is what I needed to fix multiple FindItem calls.
-  JsonObject& responseJson = jsonBuffer.parseObject(msg);
+  jsonBuffer.clear(); // Aha! This is what I needed to fix multiple ShowItems calls.
+  JsonObject& responseJson = jsonBuffer.parseObject(data);
 
   if (!responseJson.success()) {
     Serial.println("Parsing JSON failed");
     return;
   }
 
-  const char* cmd = responseJson["Command"];
+  const char* cmd = responseJson["command"];
 
   Serial.print("Command: ");
   Serial.println(cmd);
@@ -400,7 +290,7 @@ void azureFunctionEventResponseHandler(const char *event, const char *data)
 
 void welcomeResponseHandler(JsonObject& json)
 {
-  char* data = json["Message"];
+  const char* data = json["Message"];
 
   char* tmp = "W E L C O M E  ";
   strcat(tmp, (char*)data);
@@ -411,27 +301,41 @@ void welcomeResponseHandler(JsonObject& json)
   setDisplay(ON);
 }
 
-void findItemResponseHandler(JsonObject& json)
+void showItemsResponseHandler(JsonObject& json)
 {
-  int count = json["Count"];
+  int count = json["count"];
   if (count <= 0) {
     Serial.println("Item not found");
     dispayItemNotFound();
-  } else {
-    JsonObject& result = json["Result"][0];
+    return;
+  } 
 
-    const char* item = result["Name"];
-    int quantity = result["Quantity"];
-    int row = result["Row"];
-    int col = result["Col"];
+  setDisplay(ON);
 
-    setDisplay(ON);
-    lightOneBox(row, col, green);
+  for (int i = 0; i < count; i++)
+  {
+     JsonObject& item = json["items"][i];
 
-    Serial.printlnf("item: %s, row: %d, col: %d, quantity: %d", item, row, col, quantity);
+    const char* name = item["name"];
+    int quantity = item["quantity"];
+    int row = item["row"];
+    int col = item["col"];
 
-    GFX_setString(item);
+     Serial.printlnf("item: %s, row: %d, col: %d, quantity: %d", name, row, col, quantity);
+
+     GFX_lightBox(row, col, green);
+     if(count == 1) {
+       GFX_setString(name);
+     }
   }
+}
+
+void errorResponseHandler(JsonObject& json)
+{
+  setDisplay(ON);
+  const char* message = json["message"];
+  Serial.printlnf("error: %s", message);
+  GFX_showError(message);
 }
 
 void findTagsResponseHandler(JsonObject& json)
@@ -513,7 +417,7 @@ void addTagsResponseHandler(JsonObject& json)
   }
 }
 
-// Modifying quantity triggers FindItem response handler
+// Modifying quantity triggers ShowItems response handler
 void setQuantityResponseHandler(JsonObject& json)
 {
   Serial.println("setQuantityResponseHandler");

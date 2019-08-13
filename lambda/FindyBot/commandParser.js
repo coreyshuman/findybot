@@ -1,6 +1,8 @@
 'use strict';
 
 const MatrixModel = require('./matrixModel');
+const ItemListResponse = require('./responses/itemListResponse');
+const ErrorResponse = require('./responses/errorResponse');
 
 module.exports = class CommandParser {
     constructor(client) {
@@ -36,8 +38,7 @@ module.exports = class CommandParser {
             // item already exists, update tag and return
             if(existingItems) {
                 await this.client.insertTags(nameKey, tagInfo.tags);
-                existingItems[0].success = true;
-                return existingItems[0];
+                return new ItemListResponse(existingItems);
             }
 
             const matrix = new MatrixModel();
@@ -50,7 +51,7 @@ module.exports = class CommandParser {
 
             const nextAvailableBox = matrix.getNextAvailableBox(boxInfo.boxSize === 'S');
             if(nextAvailableBox == null) {
-                return {success: false, message: "No available containers."};
+                return new ErrorResponse("No available containers.");
             }
             
             try {
@@ -71,7 +72,7 @@ module.exports = class CommandParser {
                 throw e;
             }
 
-            return {success: true, nameKey, name: itemName, quantity: countInfo.count, row: nextAvailableBox.row, col: nextAvailableBox.col};
+            return new ItemListResponse([{name: itemName, quantity: countInfo.count, row: nextAvailableBox.row, col: nextAvailableBox.col}]);
 
         } catch(e) {
             console.error(e); 
@@ -80,21 +81,27 @@ module.exports = class CommandParser {
             } catch(e) { 
                 console.error(e); 
             }
-            return {success: false, message: "Database error occurred."};
+            return new ErrorResponse("Database error occurred.");
         }
     }
 
     async parseFindItem(cmd) {
         cmd = cmd.toLowerCase();
 
-        const existingItems = await this.client.findItem(itemInfo.itemName);
-        console.log(existingItems);
-        if(existingItems) {
-            existingItems[0].success = true;
-            return existingItems[0];
+        const countInfo = this.getCountInfo(cmd);
+        const boxInfo = this.getBoxInfo(countInfo.subcommand);
+        const tagInfo = this.getTagInfo(boxInfo.subcommand);
+        // todo - singularize item
+        const itemName = tagInfo.subcommand;
+        const nameKey = this.getNameKey(itemName);
+
+        try {
+            const existingItems = await this.client.findItem(nameKey);
+            return new ItemListResponse(existingItems ? existingItems : []);
+        } catch(e) {
+            await this.client.logError(e);
+            return new ErrorResponse(e.message);
         }
-        
-        return {success: false, message: "Item not found."};
     }
 
     getCountInfo(cmd) {

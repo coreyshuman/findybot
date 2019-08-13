@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const CommandParser = require('../commandParser');
+const ItemListResponse = require('../responses/itemListResponse');
 
 const client = {};
 client.logError = (e) => {console.error(e.message ? e.message : e)};
@@ -232,7 +233,7 @@ describe('Command Insert Test', () => {
         };
         try {
             const response = await commandParser.parseInsertCommand(cmd);
-            assert.deepStrictEqual(response, expected, "parseInsertCommand failed: " + cmd);
+            assert.deepStrictEqual(response, new ItemListResponse([{name, quantity: 4, row: 0, col:1}]), "parseInsertCommand failed: " + cmd);
         } catch(e) {
             throw e;
         }
@@ -288,7 +289,7 @@ describe('Command Insert Test', () => {
         };
         try {
             const response = await commandParser.parseInsertCommand(cmd);
-            assert.deepStrictEqual(response, expected, "parseInsertCommand failed: " + cmd);
+            assert.deepStrictEqual(response, new ItemListResponse([{name, quantity: 44, row: 8, col:2}]), "parseInsertCommand failed: " + cmd);
         } catch(e) {
             throw e;
         }

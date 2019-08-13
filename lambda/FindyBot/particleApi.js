@@ -9,21 +9,8 @@ module.exports = class ParticleApi {
         this.accessToken = process.env.PARTICLE_TOKEN;
     }
 
-    async highlightItem(item) {
-        const payload = {
-            Command: "FindItem",
-            Count: 1,
-            Result: [{
-                Name: item.name,
-                Quantity: item.quantity,
-                Row: item.row,
-                Col: item.col
-            }]
-        };
-        let payloadStr = JSON.stringify(payload);
-
-        return this.publishEvent('Findybot_', payloadStr, true, 5);
-
+    async highlightItem(itemListResponse) {
+        return this.publishEvent('Findybot_', itemListResponse.toPayload(), true, 5);
     }
 
 
