@@ -1,5 +1,6 @@
 # deployment
 *.zip
+deploy.bat
 
 # build
 *.bin

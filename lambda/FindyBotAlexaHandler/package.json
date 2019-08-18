@@ -1,0 +1,16 @@
+{
+  "name": "findybotalexahandler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "predeploy": "zip -r Lambda-Deployment.zip * -x *.zip *.log",
+    "deploy": "deploy.bat"
+  },
+  "author": "Corey Shuman",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.512.0"
+  }
+}

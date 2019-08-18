@@ -1,0 +1,13 @@
+{
+  "name": "findybotdbhandler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "predeploy": "zip -r Lambda-Deployment.zip * -x *.zip *.log",
+    "deploy": "echo hello world"
+  },
+  "author": "Corey Shuman",
+  "license": "ISC"
+}
