@@ -5,9 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "predeploy": "zip -r Lambda-Deployment.zip * -x *.zip *.log",
-    "deploy": "echo hello world"
+    "predeploy": "zip -r deploy/Lambda-Deployment.zip * -x *.zip *.log package*.json test/* deploy/*",
+    "deploy": "deploy/deploy.bat"
   },
   "author": "Corey Shuman",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^7.12.1"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.0"
+  }
 }

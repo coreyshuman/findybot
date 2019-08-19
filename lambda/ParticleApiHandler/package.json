@@ -4,11 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "predeploy": "zip -r deploy/Lambda-Deployment.zip * -x *.zip *.log package*.json test/* deploy/*",
+    "deploy": "deploy/deploy.bat"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.19.0"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.0"
   }
 }

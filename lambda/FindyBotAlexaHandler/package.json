@@ -5,12 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "predeploy": "zip -r Lambda-Deployment.zip * -x *.zip *.log",
-    "deploy": "deploy.bat"
+    "predeploy": "zip -r deploy/Lambda-Deployment.zip * -x *.zip *.log package*.json test/* deploy/*",
+    "deploy": "deploy/deploy.bat"
   },
   "author": "Corey Shuman",
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.512.0"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.0"
   }
 }
