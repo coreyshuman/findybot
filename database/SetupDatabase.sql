@@ -1,4 +1,4 @@
-create user findyuser with password 'abc';
+create user findyuser with password 'abc'; -- you should change this password
 grant findyuser to current_user;
 create schema findybot authorization findyuser;
 

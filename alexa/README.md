@@ -1,8 +1,12 @@
-# Create Lambda Function
+# Findybot Alexa Skill
+
+Note: Using "Findy bot" as an invocation name would not work, so I used "finder bot" instead.
+
+## Create Lambda Function
 see [Lambda Readme](../lambda/README.md)
 - Keep Tab Open (Needed in next section)
 
-# Create New Skill
+## Create New Skill
 - Open Alexa Developer Console: https://developer.amazon.com/alexa/console/ask
 - Click Create Skill
     - Enter Skill Name

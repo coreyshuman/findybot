@@ -1,3 +1,5 @@
+# Findybot Postgres Database Hosted on AWS RDS
+
 # RDS Database Setup
 
 1. Log into AWS
@@ -32,5 +34,9 @@
 
 
 # Setup Database and Tables
-1. Connect with postgres database tool of choice (DBeaver)
+1. Connect to RDS Postrgres instance with Postgres database tool of choice 
+  - DBeaver
+  - Postico
+2. Create secure password in `SetupDatabase.sql`
+3. Execute `SetupDatabase.sql`
 

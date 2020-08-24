@@ -1,3 +1,5 @@
+# Findybot Lambda Functions
+
 # Lambda Setup
 1. Choose "US East (N. Virignia)" (required for Alexa)
 1. Services > Lambda
